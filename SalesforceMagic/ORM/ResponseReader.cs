@@ -75,7 +75,7 @@ namespace SalesforceMagic.ORM
             T obj = Activator.CreateInstance<T>();
             TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
 
-            foreach (PropertyInfo property in type.GetProperties().Where(x => x.GetCustomAttribute<SalesforceReadonly>() == null))
+            foreach (PropertyInfo property in type.GetProperties())
             {
                 string value;
                 Type propertyType = property.PropertyType;

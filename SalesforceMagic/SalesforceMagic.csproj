@@ -71,6 +71,7 @@
     <Compile Include="Entities\SObject.cs" />
     <Compile Include="Enums\ApiType.cs" />
     <Compile Include="Exceptions\SalesforceRequestException.cs" />
+    <Compile Include="Extensions\SObjectExtensions.cs" />
     <Compile Include="Extensions\TypeExtensions.cs" />
     <Compile Include="Http\Enums\RequestType.cs" />
     <Compile Include="Http\HttpClient.cs" />

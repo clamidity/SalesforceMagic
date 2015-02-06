@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
 using FastMember;
+using SalesforceMagic.Attributes;
 using SalesforceMagic.Entities.Abstract;
 using SalesforceMagic.Extensions;
 using SalesforceMagic.ORM;
@@ -12,72 +14,86 @@ using SalesforceMagic.ORM.BaseRequestTemplates;
 
 namespace SalesforceMagic.Entities
 {
-    public abstract class SObject : ISalesforceObject, IXmlSerializable
-    {
-        public string Id { get; set; }
+	public abstract class SObject : ISalesforceObject, IXmlSerializable
+	{
+		public string Id { get; set; }
 
-        public XmlSchema GetSchema()
-        {
-            return null;
-        }
+		/// <summary>
+		/// List of field names that, if null, will be included in the SOAP serialization
+		/// </summary>
+		[SalesforceName("fieldsToNull")]
+		public string[] FieldsToNull { get; set; } 
 
-        public void ReadXml(XmlReader reader)
-        {
-        }
+		public XmlSchema GetSchema()
+		{
+			return null;
+		}
 
-        public void WriteXml(XmlWriter writer)
-        {
-            // TODO: Implement more robust serialization
-            Type type = GetType();
-            TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
-            writer.WriteElementString("type", type.GetName());
+		public void ReadXml(XmlReader reader)
+		{
+		}
 
-            foreach (PropertyInfo info in type.GetProperties())
-            {
-                object value = accessor[this, info.Name];
-                if (value == null) continue;
+		public void WriteXml(XmlWriter writer)
+		{
+			// TODO: Implement more robust serialization
+			Type type = GetType();
+			TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
+			writer.WriteElementString("type", type.GetName());
 
-                string xmlValue = value is DateTime
-                    ? ((DateTime)value).ToString("yyyy-MM-ddTHH:mm:ssZ")
-                    : value.ToString();
+			var fieldsToNull = new HashSet<string>(FieldsToNull ?? new string[] {}) ;
 
-                //Added additional routine for when value is Byte[] ---bnewbold 22OCT2014
-                if ((value as byte[]) != null)
-                {
-                    //When value is passed in a byte array, as when uploading a filestream file, we need to read the value in rather than cast it to a string.
-                    byte[] byteArray = (byte[])value; //Cast value as byte array into temp variable
-                    writer.WriteStartElement(info.GetName()); //Not using WriteElementsString so need to preface with the XML Tag
-                    writer.WriteBase64(byteArray, 0, byteArray.Length); //Just use base64 XML Writer
-                    writer.WriteEndElement(); //Close the xml tag
-                    continue;
-                }
+			foreach (PropertyInfo info in type.GetProperties().Where(x => x.GetCustomAttribute<SalesforceReadonly>() == null))
+			{
+				object value = accessor[this, info.Name];
 
-                writer.WriteElementString(info.GetName(), SalesforceNamespaces.SObject, xmlValue);
-            }
-        }
+				if ((value == null) && (!fieldsToNull.Contains(info.Name))) continue;
 
-        internal string ToCsv()
-        {
-            Type type = GetType();
-            TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
-            string[] values = type.GetProperties().Select(x => GetCsvValue(x, accessor)).ToArray();
+				string xmlValue = null;
 
-            return String.Join(",", values);
-        }
+				if (value != null)
+				{
+					xmlValue = value is DateTime
+						? ((DateTime) value).ToString("yyyy-MM-ddTHH:mm:ssZ")
+						: value.ToString();
+				}
 
-        private string GetCsvValue(PropertyInfo info, TypeAccessor accessor)
-        {
-            Type propertyType = info.PropertyType;
-            if (propertyType == typeof(string)) return string.Format("\"{0}\"", accessor[this, info.Name]);
+				//Added additional routine for when value is Byte[] ---bnewbold 22OCT2014
+				if ((value as byte[]) != null)
+				{
+					//When value is passed in a byte array, as when uploading a filestream file, we need to read the value in rather than cast it to a string.
+					byte[] byteArray = (byte[])value; //Cast value as byte array into temp variable
+					writer.WriteStartElement(info.GetName()); //Not using WriteElementsString so need to preface with the XML Tag
+					writer.WriteBase64(byteArray, 0, byteArray.Length); //Just use base64 XML Writer
+					writer.WriteEndElement(); //Close the xml tag
+					continue;
+				}
 
-            return propertyType == typeof(DateTime)
-                ? string.Format("\"{0}\"", GetDate((DateTime)accessor[this, info.Name]))
-                : string.Format("{0}", accessor[this, info.Name]);
-        }
+				writer.WriteElementString(info.GetName(), SalesforceNamespaces.SObject, xmlValue);
+			}
+		}
 
-        private string GetDate(DateTime date)
-        {
-            return date == DateTime.MinValue ? null : date.ToString("yyyy-MM-ddTHH:mm:ssZ");
-        }
-    }
+		internal string ToCsv()
+		{
+			Type type = GetType();
+			TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
+			string[] values = type.GetProperties().Select(x => GetCsvValue(x, accessor)).ToArray();
+
+			return String.Join(",", values);
+		}
+
+		private string GetCsvValue(PropertyInfo info, TypeAccessor accessor)
+		{
+			Type propertyType = info.PropertyType;
+			if (propertyType == typeof(string)) return string.Format("\"{0}\"", accessor[this, info.Name]);
+
+			return propertyType == typeof(DateTime)
+				? string.Format("\"{0}\"", GetDate((DateTime)accessor[this, info.Name]))
+				: string.Format("{0}", accessor[this, info.Name]);
+		}
+
+		private string GetDate(DateTime date)
+		{
+			return date == DateTime.MinValue ? null : date.ToString("yyyy-MM-ddTHH:mm:ssZ");
+		}
+	}
 }
