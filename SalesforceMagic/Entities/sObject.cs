@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security;
 using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
@@ -22,7 +23,7 @@ namespace SalesforceMagic.Entities
 		/// List of field names that, if null, will be included in the SOAP serialization
 		/// </summary>
 		[SalesforceName("fieldsToNull")]
-		public string[] FieldsToNull { get; set; } 
+		public string[] FieldsToNull { get; set; }
 
 		public XmlSchema GetSchema()
 		{
@@ -40,12 +41,11 @@ namespace SalesforceMagic.Entities
 			TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
 			writer.WriteElementString("type", type.GetName());
 
-			var fieldsToNull = new HashSet<string>(FieldsToNull ?? new string[] {}) ;
+			var fieldsToNull = new HashSet<string>(FieldsToNull ?? new string[] { });
 
 			foreach (PropertyInfo info in type.GetProperties().Where(x => x.GetCustomAttribute<SalesforceReadonly>() == null))
 			{
 				object value = accessor[this, info.Name];
-
 				if ((value == null) && (!fieldsToNull.Contains(info.Name))) continue;
 
 				string xmlValue = null;
@@ -53,7 +53,7 @@ namespace SalesforceMagic.Entities
 				if (value != null)
 				{
 					xmlValue = value is DateTime
-						? ((DateTime) value).ToString("yyyy-MM-ddTHH:mm:ssZ")
+						? ((DateTime)value).ToString("yyyy-MM-ddTHH:mm:ssZ")
 						: value.ToString();
 				}
 
@@ -67,7 +67,7 @@ namespace SalesforceMagic.Entities
 					writer.WriteEndElement(); //Close the xml tag
 					continue;
 				}
-
+				
 				writer.WriteElementString(info.GetName(), SalesforceNamespaces.SObject, xmlValue);
 			}
 		}
@@ -84,7 +84,11 @@ namespace SalesforceMagic.Entities
 		private string GetCsvValue(PropertyInfo info, TypeAccessor accessor)
 		{
 			Type propertyType = info.PropertyType;
-			if (propertyType == typeof(string)) return string.Format("\"{0}\"", accessor[this, info.Name]);
+			if (propertyType == typeof (string))
+			{
+				string value = (string) accessor[this, info.Name];
+				if (!string.IsNullOrEmpty(value)) return string.Format("\"{0}\"", PrepareCsvValue(value));
+			}
 
 			return propertyType == typeof(DateTime)
 				? string.Format("\"{0}\"", GetDate((DateTime)accessor[this, info.Name]))
@@ -94,6 +98,11 @@ namespace SalesforceMagic.Entities
 		private string GetDate(DateTime date)
 		{
 			return date == DateTime.MinValue ? null : date.ToString("yyyy-MM-ddTHH:mm:ssZ");
+		}
+
+		private string PrepareCsvValue(string value)
+		{
+			return SecurityElement.Escape(value);
 		}
 	}
 }
