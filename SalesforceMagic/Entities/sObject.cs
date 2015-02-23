@@ -41,9 +41,10 @@ namespace SalesforceMagic.Entities
 			TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
 			writer.WriteElementString("type", type.GetName());
 
-			var fieldsToNull = new HashSet<string>(FieldsToNull ?? new string[] { });
+			var fieldsToNull = new HashSet<string>(FieldsToNull ?? new string[] {});
 
-			foreach (PropertyInfo info in type.GetProperties().Where(x => x.GetCustomAttribute<SalesforceReadonly>() == null))
+			foreach (PropertyInfo info in type.GetProperties().Where(x => (x.GetCustomAttribute<SalesforceReadonly>() == null) &&
+			                                                              (x.GetCustomAttribute<SalesforceIgnore>() == null)))
 			{
 				object value = accessor[this, info.Name];
 				if ((value == null) && (!fieldsToNull.Contains(info.Name))) continue;
@@ -53,7 +54,7 @@ namespace SalesforceMagic.Entities
 				if (value != null)
 				{
 					xmlValue = value is DateTime
-						? ((DateTime)value).ToString("yyyy-MM-ddTHH:mm:ssZ")
+						? ((DateTime) value).ToString("yyyy-MM-ddTHH:mm:ssZ")
 						: value.ToString();
 				}
 
@@ -61,13 +62,13 @@ namespace SalesforceMagic.Entities
 				if ((value as byte[]) != null)
 				{
 					//When value is passed in a byte array, as when uploading a filestream file, we need to read the value in rather than cast it to a string.
-					byte[] byteArray = (byte[])value; //Cast value as byte array into temp variable
+					byte[] byteArray = (byte[]) value; //Cast value as byte array into temp variable
 					writer.WriteStartElement(info.GetName()); //Not using WriteElementsString so need to preface with the XML Tag
 					writer.WriteBase64(byteArray, 0, byteArray.Length); //Just use base64 XML Writer
 					writer.WriteEndElement(); //Close the xml tag
 					continue;
 				}
-				
+
 				writer.WriteElementString(info.GetName(), SalesforceNamespaces.SObject, xmlValue);
 			}
 		}
