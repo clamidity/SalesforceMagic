@@ -54,7 +54,7 @@ namespace SalesforceMagic.Entities
 				if (value != null)
 				{
 					xmlValue = value is DateTime
-						? ((DateTime) value).ToString("yyyy-MM-ddTHH:mm:ssZ")
+						? ((DateTime) value).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 						: value.ToString();
 				}
 
