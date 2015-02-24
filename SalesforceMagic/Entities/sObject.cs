@@ -47,7 +47,11 @@ namespace SalesforceMagic.Entities
 			                                                              (x.GetCustomAttribute<SalesforceIgnore>() == null)))
 			{
 				object value = accessor[this, info.Name];
-				if ((value == null) && (!fieldsToNull.Contains(info.Name))) continue;
+
+				if ((value == null) && (!fieldsToNull.Contains(info.GetName())))
+				{
+					continue;
+				}
 
 				string xmlValue = null;
 
