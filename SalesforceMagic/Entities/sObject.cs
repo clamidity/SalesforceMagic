@@ -46,6 +46,16 @@ namespace SalesforceMagic.Entities
 			foreach (PropertyInfo info in type.GetProperties().Where(x => (x.GetCustomAttribute<SalesforceReadonly>() == null) &&
 			                                                              (x.GetCustomAttribute<SalesforceIgnore>() == null)))
 			{
+				if (info.Name.Equals("FieldsToNull", StringComparison.InvariantCultureIgnoreCase))
+				{
+					foreach (var field in fieldsToNull)
+					{
+						writer.WriteElementString(info.GetName(), SalesforceNamespaces.SObject, field);
+					}
+
+					continue;
+				}
+
 				object value = accessor[this, info.Name];
 
 				if ((value == null) && (!fieldsToNull.Contains(info.GetName())))
