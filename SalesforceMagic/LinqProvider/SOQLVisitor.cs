@@ -39,9 +39,13 @@ namespace SalesforceMagic.LinqProvider
                     return VisitBinary(expression as BinaryExpression, "<");
                 case ExpressionType.GreaterThan:
                     return VisitBinary(expression as BinaryExpression, ">");
-                case ExpressionType.AndAlso:
+				case ExpressionType.And:
+				case ExpressionType.AndAlso:
                     return VisitBinary(expression as BinaryExpression, "AND");
-                case ExpressionType.Equal:
+				case ExpressionType.Or:
+				case ExpressionType.OrElse:
+					return VisitBinary(expression as BinaryExpression, "OR");
+				case ExpressionType.Equal:
                     return VisitBinary(expression as BinaryExpression, "=");
                 case ExpressionType.NotEqual:
                     return VisitBinary(expression as BinaryExpression, "!=");
@@ -65,7 +69,7 @@ namespace SalesforceMagic.LinqProvider
 
         private static string VisitBinary(BinaryExpression node, string opr)
         {
-            return VisitExpression(node.Left) + " " + opr + " " + VisitExpression(node.Right, true);
+            return "(" + VisitExpression(node.Left) + " " + opr + " " + VisitExpression(node.Right, true) + ")";
         }
 
         private static string VisitConstant(ConstantExpression node)
