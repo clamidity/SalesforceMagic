@@ -1,6 +1,7 @@
 ﻿using System;
 using SalesforceMagic.Attributes;
 using SalesforceMagic.BulkApi.Enum;
+using SalesforceMagic.Entities;
 
 namespace SalesforceMagic.BulkApi.Models
 {

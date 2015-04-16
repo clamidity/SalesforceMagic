@@ -66,7 +66,7 @@ namespace SalesforceMagic.Abstract
         /// <typeparam name="T"></typeparam>
         /// <param name="query"></param>
         /// <returns></returns>
-        IEnumerable<T> Query<T>(string query);
+        IEnumerable<T> Query<T>(string query) where T : SObject;
 
         /// <summary>
         ///     Advanced Query
@@ -102,7 +102,7 @@ namespace SalesforceMagic.Abstract
         /// <typeparam name="T"></typeparam>
         /// <param name="query"></param>
         /// <returns></returns>
-        QueryResult<T> AdvancedQuery<T>(string query);
+        QueryResult<T> AdvancedQuery<T>(string query) where T : SObject;
 
         /// <summary>
         ///     Query More
@@ -112,10 +112,27 @@ namespace SalesforceMagic.Abstract
         /// <typeparam name="T"></typeparam>
         /// <param name="queryLocator"></param>
         /// <returns></returns>
-        QueryResult<T> QueryMore<T>(string queryLocator);
+        QueryResult<T> QueryMore<T>(string queryLocator) where T : SObject;
 
+        /// <summary>
+        ///     Query Single
+        ///      - Used to retrieve a single record
+        ///        using filter criteria
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
         T QuerySingle<T>(Expression<Func<T, bool>> predicate) where T : SObject;
-        T QuerySingle<T>(string query);
+
+        /// <summary>
+        ///     Query Single
+        ///      - Used to retrieve a single record
+        ///        using a raw string query
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="query"></param>
+        /// <returns></returns>
+        T QuerySingle<T>(string query) where T : SObject;
 
         #endregion
 
@@ -136,6 +153,7 @@ namespace SalesforceMagic.Abstract
         #region Bulk Data Methods
 
         JobInfo CreateBulkJob<T>(JobConfig config);
+        JobInfo QueryBulkJob(string jobId);
         BatchInfo AddBatch<T>(IEnumerable<T> items, string jobId, int limit = 10000) where T : SObject;
         SalesforceResponse CloseBulkJob(string jobId);
 

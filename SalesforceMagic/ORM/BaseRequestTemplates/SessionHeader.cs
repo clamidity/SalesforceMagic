@@ -9,4 +9,11 @@ namespace SalesforceMagic.ORM.BaseRequestTemplates
         [XmlElement("sessionId", Namespace = SalesforceNamespaces.SalesforceRequest)]
         public string SessionId { get; set; } 
     }
+
+    [Serializable]
+    public class QueryOptionsHeader
+    {
+        [XmlElement("batchSize", Namespace = SalesforceNamespaces.SalesforceRequest)]
+        public int BatchSize { get; set; } 
+    }
 }

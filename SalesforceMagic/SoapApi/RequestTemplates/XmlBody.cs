@@ -1,6 +1,4 @@
-﻿using System.Xml;
-using System.Xml.Schema;
-using System.Xml.Serialization;
+﻿using System.Xml.Serialization;
 using SalesforceMagic.SoapApi.RequestTemplates;
 
 namespace SalesforceMagic.ORM.BaseRequestTemplates
@@ -27,5 +25,8 @@ namespace SalesforceMagic.ORM.BaseRequestTemplates
 
         [XmlElement("delete", Namespace = SalesforceNamespaces.SalesforceRequest)]
         public DeleteTemplate DeleteTemplate { get; set; }
+
+        [XmlElement("retrieve", Namespace = SalesforceNamespaces.SalesforceRequest)]
+        public RetrieveTemplate RetrieveTemplate { get; set; }
     }
 }

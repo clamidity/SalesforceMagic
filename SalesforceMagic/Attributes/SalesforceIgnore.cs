@@ -10,6 +10,7 @@ namespace SalesforceMagic.Attributes
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
     public class SalesforceIgnore : Attribute
     {
+        public bool IfEmpty { get; set; }
 //        public ApiType ApiType { get; set; }
 //
 //        public SalesforceIgnore(/*ApiType type = ApiType.Both*/)

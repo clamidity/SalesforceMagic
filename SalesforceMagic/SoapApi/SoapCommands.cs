@@ -17,46 +17,38 @@ namespace SalesforceMagic.SoapApi
             });
         }
 
-        internal static string Query(string query, string sessionId)
+        internal static string Query(string query, SalesforceSession session)
         {
             return XmlRequestGenerator.GenerateRequest(new XmlBody
             {
                 QueryTemplate = new QueryTemplate(query)
-            },
-            new XmlHeader
-            {
-                SessionHeader = new SessionHeader
-                {
-                    SessionId = sessionId
-                }
-            });
+            }, BuildXmlHeader(session));
         }
 
-        public static string QueryMore(string queryLocator, string sessionId)
+        internal static string Retrieve<T>(string[] ids, SalesforceSession session) where T : SObject
+        {
+            return XmlRequestGenerator.GenerateRequest(new XmlBody
+            {
+                RetrieveTemplate = new RetrieveTemplate
+                {
+                    Type = typeof(T),
+                    Ids = ids
+                }
+            }, BuildXmlHeader(session));
+        }
+
+        public static string QueryMore(string queryLocator, SalesforceSession session)
         {
             return XmlRequestGenerator.GenerateRequest(new XmlBody
             {
                 QueryMoreTemplate = new QueryMoreTemplate(queryLocator)
-            },
-            new XmlHeader
-            {
-                SessionHeader = new SessionHeader
-                {
-                    SessionId = sessionId
-                }
-            });
+            }, BuildXmlHeader(session));
         }
 
-        public static string CrudOperation<T>(CrudOperation<T> operation, string sessionId) where T : SObject
+        public static string CrudOperation<T>(CrudOperation<T> operation, SalesforceSession session) where T : SObject
         {
             XmlBody body = GetCrudBody(operation);
-            return XmlRequestGenerator.GenerateRequest(body, new XmlHeader
-            {
-                SessionHeader = new SessionHeader
-                {
-                    SessionId = sessionId
-                }
-            });
+            return XmlRequestGenerator.GenerateRequest(body, BuildXmlHeader(session));
         }
 
         private static XmlBody GetCrudBody<T>(CrudOperation<T> operation) where T : SObject
@@ -93,6 +85,27 @@ namespace SalesforceMagic.SoapApi
             }
 
             return body;
+        }
+
+        private static XmlHeader BuildXmlHeader(SalesforceSession session)
+        {
+            var header = new XmlHeader
+            {
+                SessionHeader = new SessionHeader
+                {
+                    SessionId = session.SessionId
+                }
+            };
+
+            if (session.BatchSize.HasValue)
+            {
+                header.QueryOptions = new QueryOptionsHeader
+                {
+                    BatchSize = session.BatchSize.Value
+                };
+            }
+
+            return header;
         }
     }
 }

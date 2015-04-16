@@ -1,6 +1,5 @@
 ﻿using System.Xml;
 using System.Xml.Serialization;
-using SalesforceMagic.BulkApi.RequestTemplates;
 using SalesforceMagic.ORM.BaseRequestTemplates;
 
 namespace SalesforceMagic.Http

@@ -6,9 +6,9 @@ using SalesforceMagic.Extensions;
 
 namespace SalesforceMagic.LinqProvider
 {
-    internal static class SOQLVisitor
+    public static class SOQLVisitor
     {
-        internal static string ConvertToSOQL(Expression expression)
+        public static string ConvertToSOQL(Expression expression)
         {
             return VisitExpression(expression);
         }
@@ -52,11 +52,6 @@ namespace SalesforceMagic.LinqProvider
                 case ExpressionType.Lambda:
                     return VisitLambda(expression as LambdaExpression);
                 case ExpressionType.MemberAccess:
-                    // TODO: I don't like this
-                    if (expression.Type == typeof(bool))
-                    {
-                        return ((PropertyInfo)((MemberExpression)expression).Member).GetName() + " = True";
-                    }
                     return VisitMember(expression as MemberExpression, valueExpression);
                 case ExpressionType.Constant:
                     return VisitConstant(expression as ConstantExpression);
@@ -69,7 +64,14 @@ namespace SalesforceMagic.LinqProvider
 
         private static string VisitBinary(BinaryExpression node, string opr)
         {
-            return "(" + VisitExpression(node.Left) + " " + opr + " " + VisitExpression(node.Right, true) + ")";
+            if (node.Left.NodeType == ExpressionType.MemberAccess 
+                && node.Left.Type == typeof(bool)
+                && node.Right.NodeType == ExpressionType.Constant)
+            {
+                var right = ((ConstantExpression) node.Right).Value;
+                return ((PropertyInfo)((MemberExpression)node.Left).Member).GetName() + " " + opr + " " + right;
+            }
+            return VisitExpression(node.Left) + " " + opr + " " + VisitExpression(node.Right, true);
         }
 
         private static string VisitConstant(ConstantExpression node)
@@ -94,6 +96,8 @@ namespace SalesforceMagic.LinqProvider
 
         private static string VisitMember(MemberExpression node, bool valueExpression = false)
         {
+            if (node == null) return "null";
+            if (node.Type == typeof(bool)) return ((PropertyInfo)node.Member).GetName() + " = True";
             if (node.Member is PropertyInfo && !valueExpression) return ((PropertyInfo)node.Member).GetName();
             if (node.Expression == null) throw new NullReferenceException();
 

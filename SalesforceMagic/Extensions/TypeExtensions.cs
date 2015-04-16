@@ -10,6 +10,21 @@ namespace SalesforceMagic.Extensions
 {
     internal static class TypeExtensions
     {
+        internal static IEnumerable<PropertyInfo> GetFilteredProperties<T>(this Type type) where T : Attribute
+        {
+            return type.GetProperties().Where(x => x.GetCustomAttribute<T>() != null);
+        }
+
+        internal static IEnumerable<PropertyInfo> FilterProperties<T>(this Type type) where T : Attribute
+        {
+            return type.GetProperties().Where(x => x.GetCustomAttribute<T>() == null);
+        }
+
+        internal static IEnumerable<PropertyInfo> FilterProperties<T, TK>(this Type type) where T : Attribute where TK : Attribute
+        {
+            return type.GetProperties().Where(x => x.GetCustomAttribute<T>() == null && x.GetCustomAttribute<TK>() == null);
+        }
+
         internal static IEnumerable<string> GetPropertyNames(this Type type, bool skipIgnored = false)
         {
             return type.GetProperties().GetNames(skipIgnored);
@@ -66,6 +81,8 @@ namespace SalesforceMagic.Extensions
         {
             try
             {
+                if (string.IsNullOrEmpty(value)) return default(int);
+
                 return value.Contains(".")
                     ? (int) Convert.ToDecimal(value)
                     : Convert.ToInt32(value);

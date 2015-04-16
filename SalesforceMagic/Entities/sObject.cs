@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Security;
 using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
@@ -12,112 +11,112 @@ using SalesforceMagic.Entities.Abstract;
 using SalesforceMagic.Extensions;
 using SalesforceMagic.ORM;
 using SalesforceMagic.ORM.BaseRequestTemplates;
+using SalesforceMagic.SoapApi.Enum;
 
 namespace SalesforceMagic.Entities
 {
-	public abstract class SObject : ISalesforceObject, IXmlSerializable
-	{
-		public string Id { get; set; }
+    public abstract class SObject : ISalesforceObject, IXmlSerializable
+    {
+        public virtual string Id { get; set; }
 
-		/// <summary>
-		/// List of field names that, if null, will be included in the SOAP serialization
-		/// </summary>
-		[SalesforceName("fieldsToNull")]
-		public string[] FieldsToNull { get; set; }
+        [SalesforceIgnore]
+        internal CrudOperations OperationType { get; set; }
 
-		public XmlSchema GetSchema()
-		{
-			return null;
-		}
+        public XmlSchema GetSchema()
+        {
+            return null;
+        }
 
-		public void ReadXml(XmlReader reader)
-		{
-		}
+        public void ReadXml(XmlReader reader)
+        {
+        }
 
-		public void WriteXml(XmlWriter writer)
-		{
-			// TODO: Implement more robust serialization
-			Type type = GetType();
-			TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
-			writer.WriteElementString("type", type.GetName());
+        public void WriteXml(XmlWriter writer)
+        {
+            // TODO: Implement more robust serialization
+            Type type = GetType();
+            TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
+            writer.WriteElementString("type", type.GetName());
 
-			var fieldsToNull = new HashSet<string>(FieldsToNull ?? new string[] {});
+            IList<string> fieldsToNull = new List<string>();
+            foreach (PropertyInfo info in from info in type.FilterProperties<SalesforceReadonly>() 
+                                          let ignoreAttribute = info.GetCustomAttribute<SalesforceIgnore>() 
+                                          where ignoreAttribute == null || !ignoreAttribute.IfEmpty 
+                                          select info)
+            {
+                object value = accessor[this, info.Name];
+                string salesforceName = info.GetName();
 
-			foreach (PropertyInfo info in type.GetProperties().Where(x => (x.GetCustomAttribute<SalesforceReadonly>() == null) &&
-			                                                              (x.GetCustomAttribute<SalesforceIgnore>() == null)))
-			{
-				if (info.Name.Equals("FieldsToNull", StringComparison.InvariantCultureIgnoreCase))
-				{
-					foreach (var field in fieldsToNull)
-					{
-						writer.WriteElementString(info.GetName(), SalesforceNamespaces.SObject, field);
-					}
+                if (value == null)
+                {
+                    fieldsToNull.Add(salesforceName);
+                    continue;
+                }
 
-					continue;
-				}
+                var xmlValue = value is DateTime
+                    ? ((DateTime) value).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") // Contributed by: Murillo.Mike - Salesforce requires UTC dates
+                    : value.ToString();
 
-				object value = accessor[this, info.Name];
+                //Added additional routine for when value is Byte[] ---bnewbold 22OCT2014
+                if ((value as byte[]) != null)
+                {
+                    //When value is passed in a byte array, as when uploading a filestream file, we need to read the value in rather than cast it to a string.
+                    byte[] byteArray = (byte[])value; //Cast value as byte array into temp variable
+                    writer.WriteStartElement(info.GetName()); //Not using WriteElementsString so need to preface with the XML Tag
+                    writer.WriteBase64(byteArray, 0, byteArray.Length); //Just use base64 XML Writer
+                    writer.WriteEndElement(); //Close the xml tag
+                    continue;
+                }
 
-				if ((value == null) && (!fieldsToNull.Contains(info.GetName())))
-				{
-					continue;
-				}
+                writer.WriteElementString(salesforceName, SalesforceNamespaces.SObject, xmlValue);
+            }
 
-				string xmlValue = null;
+            if (OperationType != CrudOperations.Insert)
+            {
+                foreach (string field in fieldsToNull)
+                    writer.WriteElementString("fieldsToNull", SalesforceNamespaces.SObject, field);
+            }
+        }
 
-				if (value != null)
-				{
-					xmlValue = value is DateTime
-						? ((DateTime) value).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-						: value.ToString();
-				}
+        internal string ToCsv()
+        {
+            Type type = GetType();
+            TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
+            string[] values = type.FilterProperties<SalesforceReadonly, SalesforceIgnore>().Select(x => GetCsvValue(x, accessor)).ToArray();
 
-				//Added additional routine for when value is Byte[] ---bnewbold 22OCT2014
-				if ((value as byte[]) != null)
-				{
-					//When value is passed in a byte array, as when uploading a filestream file, we need to read the value in rather than cast it to a string.
-					byte[] byteArray = (byte[]) value; //Cast value as byte array into temp variable
-					writer.WriteStartElement(info.GetName()); //Not using WriteElementsString so need to preface with the XML Tag
-					writer.WriteBase64(byteArray, 0, byteArray.Length); //Just use base64 XML Writer
-					writer.WriteEndElement(); //Close the xml tag
-					continue;
-				}
+            return String.Join(",", values);
+        }
 
-				writer.WriteElementString(info.GetName(), SalesforceNamespaces.SObject, xmlValue);
-			}
-		}
+        private string GetCsvValue(PropertyInfo info, TypeAccessor accessor)
+        {
+            Type propertyType = info.PropertyType;
+            if (propertyType == typeof (string))
+            {
+                string value = (string) accessor[this, info.Name];
+                if (!string.IsNullOrEmpty(value)) return string.Format("\"{0}\"", PrepareCsvValue(value));
+            }
 
-		internal string ToCsv()
-		{
-			Type type = GetType();
-			TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
-			string[] values = type.GetProperties().Select(x => GetCsvValue(x, accessor)).ToArray();
+            if (propertyType == typeof (DateTime))
+                return string.Format("\"{0}\"", GetDate((DateTime)accessor[this, info.Name]));
+            if (propertyType == typeof(DateTime?))
+                return string.Format("\"{0}\"", GetNullableDate((DateTime?)accessor[this, info.Name]));
+            
+            return string.Format("{0}", accessor[this, info.Name]);
+        }
 
-			return String.Join(",", values);
-		}
+        private string GetDate(DateTime date)
+        {
+            return date == DateTime.MinValue ? null : date.ToString("yyyy-MM-ddTHH:mm:ssZ");
+        }
 
-		private string GetCsvValue(PropertyInfo info, TypeAccessor accessor)
-		{
-			Type propertyType = info.PropertyType;
-			if (propertyType == typeof (string))
-			{
-				string value = (string) accessor[this, info.Name];
-				if (!string.IsNullOrEmpty(value)) return string.Format("\"{0}\"", PrepareCsvValue(value));
-			}
+        private string GetNullableDate(DateTime? date)
+        {
+            return date == null ? null : ((DateTime)date).ToString("yyyy-MM-ddTHH:mm:ssZ");
+        }
 
-			return propertyType == typeof(DateTime)
-				? string.Format("\"{0}\"", GetDate((DateTime)accessor[this, info.Name]))
-				: string.Format("{0}", accessor[this, info.Name]);
-		}
-
-		private string GetDate(DateTime date)
-		{
-			return date == DateTime.MinValue ? null : date.ToString("yyyy-MM-ddTHH:mm:ssZ");
-		}
-
-		private string PrepareCsvValue(string value)
-		{
-			return SecurityElement.Escape(value);
-		}
-	}
+        private string PrepareCsvValue(string value)
+        {
+            return value.Replace("\"", "\"\"");
+        }
+    }
 }

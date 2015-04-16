@@ -89,6 +89,7 @@ namespace SalesforceMagic.Http
                 webRequest.Method = request.Method.ToString();
                 webRequest.UserAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:24.0) Gecko/20100101 Firefox/24.0";
                 webRequest.Timeout = 300000;
+                webRequest.Proxy = request.Proxy ?? WebRequest.DefaultWebProxy;
 
                 foreach (KeyValuePair<string, string> header in request.Headers)
                 {

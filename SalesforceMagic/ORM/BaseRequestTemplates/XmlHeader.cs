@@ -8,5 +8,8 @@ namespace SalesforceMagic.ORM.BaseRequestTemplates
     {
         [XmlElement("SessionHeader", Namespace = SalesforceNamespaces.SalesforceRequest)]
         public SessionHeader SessionHeader { get; set; }
+
+        [XmlElement("QueryOptions", Namespace = SalesforceNamespaces.SalesforceRequest)]
+        public QueryOptionsHeader QueryOptions { get; set; }
     }
 }

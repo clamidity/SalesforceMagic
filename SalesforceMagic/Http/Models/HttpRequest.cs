@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Net;
 using SalesforceMagic.Http.Enums;
 
 namespace SalesforceMagic.Http.Models
@@ -17,6 +18,8 @@ namespace SalesforceMagic.Http.Models
         internal Dictionary<string, string> Headers { get; set; }
         internal string Body { get; set; }
         internal string ContentType { get; set; }
+
+        internal WebProxy Proxy { get; set; }
 
         internal bool IsValid
         {
