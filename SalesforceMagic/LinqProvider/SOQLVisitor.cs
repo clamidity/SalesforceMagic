@@ -40,7 +40,7 @@ namespace SalesforceMagic.LinqProvider
                 case ExpressionType.GreaterThan:
                     return VisitBinary(expression as BinaryExpression, ">");
 				case ExpressionType.And:
-                case ExpressionType.AndAlso:
+				case ExpressionType.AndAlso:
                     return VisitBinary(expression as BinaryExpression, "AND");
 				case ExpressionType.Or:
 				case ExpressionType.OrElse:

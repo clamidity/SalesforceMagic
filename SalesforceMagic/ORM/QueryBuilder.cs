@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Linq.Expressions;
 using SalesforceMagic.Entities;
 using SalesforceMagic.Extensions;
@@ -46,7 +47,7 @@ namespace SalesforceMagic.ORM
 
         private static string CompileSelectStatements(Type type)
         {
-            return string.Format("SELECT {0} FROM {1}", string.Join(", ", type.GetPropertyNames(true)), type.GetName());
+            return string.Format("SELECT {0} FROM {1}", string.Join(", ", type.GetPropertyNames(true).Where(name => name != "fieldsToNull")), type.GetName());
         }
 
         private static void AddConditionsSet<T>(ref string query, Expression<Func<T, bool>> predicate)
