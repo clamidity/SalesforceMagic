@@ -39,9 +39,13 @@ namespace SalesforceMagic.LinqProvider
                     return VisitBinary(expression as BinaryExpression, "<");
                 case ExpressionType.GreaterThan:
                     return VisitBinary(expression as BinaryExpression, ">");
+				case ExpressionType.And:
                 case ExpressionType.AndAlso:
                     return VisitBinary(expression as BinaryExpression, "AND");
-                case ExpressionType.Equal:
+				case ExpressionType.Or:
+				case ExpressionType.OrElse:
+					return VisitBinary(expression as BinaryExpression, "OR");
+				case ExpressionType.Equal:
                     return VisitBinary(expression as BinaryExpression, "=");
                 case ExpressionType.NotEqual:
                     return VisitBinary(expression as BinaryExpression, "!=");
@@ -65,9 +69,10 @@ namespace SalesforceMagic.LinqProvider
                 && node.Right.NodeType == ExpressionType.Constant)
             {
                 var right = ((ConstantExpression) node.Right).Value;
-                return ((PropertyInfo)((MemberExpression)node.Left).Member).GetName() + " " + opr + " " + right;
+                return "(" + ((PropertyInfo)((MemberExpression)node.Left).Member).GetName() + " " + opr + " " + right + ")";
             }
-            return VisitExpression(node.Left) + " " + opr + " " + VisitExpression(node.Right, true);
+
+            return "(" + VisitExpression(node.Left) + " " + opr + " " + VisitExpression(node.Right, true) + ")";
         }
 
         private static string VisitConstant(ConstantExpression node)
@@ -118,149 +123,5 @@ namespace SalesforceMagic.LinqProvider
             if (value is int || value is float || value is decimal) return value.ToString();
             throw new InvalidDataException();
         }
-
-        #region Non-Implemented Methods
-
-        private static string VisitBlock(BlockExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitConditional(ConditionalExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitDefault(DefaultExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitDynamic(DynamicExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitExtension(Expression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitGoto(GotoExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitIndex(IndexExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitInvocation(InvocationExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitLabel(LabelExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitListInit(ListInitExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitLoop(LoopExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitMemberInit(MemberInitExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitMethodCall(MethodCallExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitNew(NewExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitNewArray(NewArrayExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitParameter(ParameterExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitRuntimeVariables(RuntimeVariablesExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitSwitch(SwitchExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitTry(TryExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static string VisitTypeBinary(TypeBinaryExpression node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static CatchBlock VisitCatchBlock(CatchBlock node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static ElementInit VisitElementInit(ElementInit node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static LabelTarget VisitLabelTarget(LabelTarget node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static MemberAssignment VisitMemberAssignment(MemberAssignment node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static MemberBinding VisitMemberBinding(MemberBinding node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static MemberListBinding VisitMemberListBinding(MemberListBinding node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static MemberMemberBinding VisitMemberMemberBinding(MemberMemberBinding node)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static SwitchCase VisitSwitchCase(SwitchCase node)
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
     }
 }
