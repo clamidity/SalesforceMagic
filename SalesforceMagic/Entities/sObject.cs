@@ -15,108 +15,122 @@ using SalesforceMagic.SoapApi.Enum;
 
 namespace SalesforceMagic.Entities
 {
-    public abstract class SObject : ISalesforceObject, IXmlSerializable
-    {
-        public virtual string Id { get; set; }
+	public abstract class SObject : ISalesforceObject, IXmlSerializable
+	{
+		protected SObject()
+		{
+			FieldsToNull = new List<string>();
+		}
 
-        [SalesforceIgnore]
-        internal CrudOperations OperationType { get; set; }
+		public virtual string Id { get; set; }
 
-        public XmlSchema GetSchema()
-        {
-            return null;
-        }
+		[SalesforceIgnore, SalesforceReadonly]
+		public virtual IList<string> FieldsToNull { get; set; }
 
-        public void ReadXml(XmlReader reader)
-        {
-        }
+		[SalesforceIgnore, SalesforceReadonly]
+		internal CrudOperations OperationType { get; set; }
 
-        public void WriteXml(XmlWriter writer)
-        {
-            // TODO: Implement more robust serialization
-            Type type = GetType();
-            TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
-            writer.WriteElementString("type", type.GetName());
+		public XmlSchema GetSchema()
+		{
+			return null;
+		}
 
-            IList<string> fieldsToNull = new List<string>();
-            foreach (PropertyInfo info in from info in type.FilterProperties<SalesforceReadonly>() 
-                                          let ignoreAttribute = info.GetCustomAttribute<SalesforceIgnore>() 
-                                          where ignoreAttribute == null || !ignoreAttribute.IfEmpty 
-                                          select info)
-            {
-                object value = accessor[this, info.Name];
-                string salesforceName = info.GetName();
+		public void ReadXml(XmlReader reader)
+		{
+		}
 
-                if (value == null)
-                {
-                    fieldsToNull.Add(salesforceName);
-                    continue;
-                }
+		public void WriteXml(XmlWriter writer)
+		{
+			// TODO: Implement more robust serialization
+			var type = GetType();
+			var accessor = ObjectHydrator.GetAccessor(type);
+			writer.WriteElementString("type", type.GetName());
 
-                var xmlValue = value is DateTime
-                    ? ((DateTime) value).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") // Contributed by: Murillo.Mike - Salesforce requires UTC dates
-                    : value.ToString();
+			IList<string> fieldsToNull = new List<string>();
+			foreach (var info in from info in type.FilterProperties<SalesforceReadonly>()
+								 let ignoreAttribute = info.GetCustomAttribute<SalesforceIgnore>()
+								 where ignoreAttribute == null || ignoreAttribute.IfEmpty
+								 select info)
+			{
+				var ignoreAttribute = info.GetCustomAttribute<SalesforceIgnore>();
+				var value = accessor[this, info.Name];
+				var salesforceName = info.GetName();
 
-                //Added additional routine for when value is Byte[] ---bnewbold 22OCT2014
-                if ((value as byte[]) != null)
-                {
-                    //When value is passed in a byte array, as when uploading a filestream file, we need to read the value in rather than cast it to a string.
-                    byte[] byteArray = (byte[])value; //Cast value as byte array into temp variable
-                    writer.WriteStartElement(info.GetName()); //Not using WriteElementsString so need to preface with the XML Tag
-                    writer.WriteBase64(byteArray, 0, byteArray.Length); //Just use base64 XML Writer
-                    writer.WriteEndElement(); //Close the xml tag
-                    continue;
-                }
+				// Need to be able to dynamically control nullable fields
+				if (value == null)
+				{
+					if ((ignoreAttribute == null) || (ignoreAttribute.IfEmpty && ((FieldsToNull.Count == 0) || FieldsToNull.Contains(info.Name))))
+					{
+						fieldsToNull.Add(salesforceName);
+					}
 
-                writer.WriteElementString(salesforceName, SalesforceNamespaces.SObject, xmlValue);
-            }
+					continue;
+				}
 
-            if (OperationType != CrudOperations.Insert)
-            {
-                foreach (string field in fieldsToNull)
-                    writer.WriteElementString("fieldsToNull", SalesforceNamespaces.SObject, field);
-            }
-        }
+				var xmlValue = value is DateTime
+					? ((DateTime)value).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") // Contributed by: Murillo.Mike - Salesforce requires UTC dates
+					: value.ToString();
 
-        internal string ToCsv()
-        {
-            Type type = GetType();
-            TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
-            string[] values = type.FilterProperties<SalesforceReadonly, SalesforceIgnore>().Select(x => GetCsvValue(x, accessor)).ToArray();
+				//Added additional routine for when value is Byte[] ---bnewbold 22OCT2014
+				if ((value as byte[]) != null)
+				{
+					//When value is passed in a byte array, as when uploading a filestream file, we need to read the value in rather than cast it to a string.
+					byte[] byteArray = (byte[])value; //Cast value as byte array into temp variable
+					writer.WriteStartElement(info.GetName()); //Not using WriteElementsString so need to preface with the XML Tag
+					writer.WriteBase64(byteArray, 0, byteArray.Length); //Just use base64 XML Writer
+					writer.WriteEndElement(); //Close the xml tag
+					continue;
+				}
 
-            return String.Join(",", values);
-        }
+				writer.WriteElementString(salesforceName, SalesforceNamespaces.SObject, xmlValue);
+			}
 
-        private string GetCsvValue(PropertyInfo info, TypeAccessor accessor)
-        {
-            Type propertyType = info.PropertyType;
-            if (propertyType == typeof (string))
-            {
-                string value = (string) accessor[this, info.Name];
-                if (!string.IsNullOrEmpty(value)) return string.Format("\"{0}\"", PrepareCsvValue(value));
-            }
+			if (OperationType != CrudOperations.Insert)
+			{
+				foreach (string field in fieldsToNull)
+					writer.WriteElementString("fieldsToNull", SalesforceNamespaces.SObject, field);
+			}
+		}
 
-            if (propertyType == typeof (DateTime))
-                return string.Format("\"{0}\"", GetDate((DateTime)accessor[this, info.Name]));
-            if (propertyType == typeof(DateTime?))
-                return string.Format("\"{0}\"", GetNullableDate((DateTime?)accessor[this, info.Name]));
-            
-            return string.Format("{0}", accessor[this, info.Name]);
-        }
+		internal string ToCsv()
+		{
+			Type type = GetType();
+			TypeAccessor accessor = ObjectHydrator.GetAccessor(type);
+			string[] values = type.FilterProperties<SalesforceReadonly, SalesforceIgnore>().Select(x => GetCsvValue(x, accessor)).ToArray();
 
-        private string GetDate(DateTime date)
-        {
-            return date == DateTime.MinValue ? null : date.ToString("yyyy-MM-ddTHH:mm:ssZ");
-        }
+			return String.Join(",", values);
+		}
 
-        private string GetNullableDate(DateTime? date)
-        {
-            return date == null ? null : ((DateTime)date).ToString("yyyy-MM-ddTHH:mm:ssZ");
-        }
+		private string GetCsvValue(PropertyInfo info, TypeAccessor accessor)
+		{
+			Type propertyType = info.PropertyType;
+			if (propertyType == typeof(string))
+			{
+				string value = (string)accessor[this, info.Name];
+				if (!string.IsNullOrEmpty(value)) return string.Format("\"{0}\"", PrepareCsvValue(value));
+			}
 
-        private string PrepareCsvValue(string value)
-        {
-            return value.Replace("\"", "\"\"");
-        }
-    }
+			if (propertyType == typeof(DateTime))
+				return string.Format("\"{0}\"", GetDate((DateTime)accessor[this, info.Name]));
+			if (propertyType == typeof(DateTime?))
+				return string.Format("\"{0}\"", GetNullableDate((DateTime?)accessor[this, info.Name]));
+
+			return string.Format("{0}", accessor[this, info.Name]);
+		}
+
+		private string GetDate(DateTime date)
+		{
+			return date == DateTime.MinValue ? null : date.ToString("yyyy-MM-ddTHH:mm:ssZ");
+		}
+
+		private string GetNullableDate(DateTime? date)
+		{
+			return date == null ? null : ((DateTime)date).ToString("yyyy-MM-ddTHH:mm:ssZ");
+		}
+
+		private string PrepareCsvValue(string value)
+		{
+			return value.Replace("\"", "\"\"");
+		}
+	}
 }

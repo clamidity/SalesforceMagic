@@ -55,8 +55,12 @@ namespace SalesforceMagic.ORM
             }
             else
             {
-                response.Result = ReadSimpleResponse<RecordResult>(results[0], document);
-                response.Success = response.Result.Success;
+	            var result = ReadSimpleResponse<RecordResult>(results[0], document);
+
+	            response.Result = result;
+				response.Results.Add(result);
+
+				response.Success = response.Result.Success;
                 if (!response.Success) response.Errors.Add(response.Result.Message);
             }
 
