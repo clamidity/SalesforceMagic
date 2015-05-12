@@ -24,10 +24,10 @@ namespace SalesforceMagic.Entities
 
 		public virtual string Id { get; set; }
 
-		[SalesforceIgnore, SalesforceReadonly]
+		[SalesforceFilter(true)]
 		public virtual IList<string> FieldsToNull { get; set; }
 
-		[SalesforceIgnore, SalesforceReadonly]
+		[SalesforceFilter(true)]
 		internal CrudOperations OperationType { get; set; }
 
 		public XmlSchema GetSchema()
@@ -44,21 +44,28 @@ namespace SalesforceMagic.Entities
 			// TODO: Implement more robust serialization
 			var type = GetType();
 			var accessor = ObjectHydrator.GetAccessor(type);
+
 			writer.WriteElementString("type", type.GetName());
 
 			IList<string> fieldsToNull = new List<string>();
-			foreach (var info in from info in type.FilterProperties<SalesforceReadonly>()
-								 let ignoreAttribute = info.GetCustomAttribute<SalesforceIgnore>()
-								 where ignoreAttribute == null || (!ignoreAttribute.IfEmpty)
-								 select info)
+			
+			var isInsert = OperationType == CrudOperations.Insert;
+
+			foreach (var info in type.FilterProperties(SalesforceFilterOption.IgnoreIfNull | (isInsert ? SalesforceFilterOption.SaveOnInsertOnly : SalesforceFilterOption.None)))
 			{
+				// get filter logic
+				var salesforceFilter = info.GetCustomAttribute<SalesforceFilterAttribute>();
+				var noFilter = salesforceFilter == null;
+				var ignoreIfEmpty = (!noFilter) && salesforceFilter.Options.HasFlag(SalesforceFilterOption.IgnoreIfNull);
+				var saveOnInsert = (!noFilter) && salesforceFilter.Options.HasFlag(SalesforceFilterOption.SaveOnInsertOnly);
+
 				var value = accessor[this, info.Name];
 				var salesforceName = info.GetName();
 
 				// Need to be able to dynamically control nullable fields
 				if (value == null)
 				{
-					if ((FieldsToNull.Count == 0) || (!FieldsToNull.Contains(info.Name)))
+					if ((noFilter || (!ignoreIfEmpty) || (isInsert && saveOnInsert)) && (!fieldsToNull.Contains(salesforceName)))
 					{
 						fieldsToNull.Add(salesforceName);
 					}
@@ -67,27 +74,31 @@ namespace SalesforceMagic.Entities
 				}
 
 				var xmlValue = value is DateTime
-					? ((DateTime)value).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") // Contributed by: Murillo.Mike - Salesforce requires UTC dates
+					? ((DateTime) value).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+					// Contributed by: Murillo.Mike - Salesforce requires UTC dates
 					: value.ToString();
 
 				//Added additional routine for when value is Byte[] ---bnewbold 22OCT2014
 				if ((value as byte[]) != null)
 				{
 					//When value is passed in a byte array, as when uploading a filestream file, we need to read the value in rather than cast it to a string.
-					byte[] byteArray = (byte[])value; //Cast value as byte array into temp variable
+					var byteArray = (byte[]) value; //Cast value as byte array into temp variable
+					
 					writer.WriteStartElement(info.GetName()); //Not using WriteElementsString so need to preface with the XML Tag
 					writer.WriteBase64(byteArray, 0, byteArray.Length); //Just use base64 XML Writer
 					writer.WriteEndElement(); //Close the xml tag
+					
 					continue;
 				}
 
 				writer.WriteElementString(salesforceName, SalesforceNamespaces.SObject, xmlValue);
 			}
 
-			if (OperationType != CrudOperations.Insert)
+			if (OperationType == CrudOperations.Insert) return;
+
+			foreach (var field in fieldsToNull)
 			{
-				foreach (string field in fieldsToNull)
-					writer.WriteElementString("fieldsToNull", SalesforceNamespaces.SObject, field);
+				writer.WriteElementString("fieldsToNull", SalesforceNamespaces.SObject, field);
 			}
 		}
 

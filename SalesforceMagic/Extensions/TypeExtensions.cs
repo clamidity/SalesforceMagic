@@ -10,15 +10,24 @@ namespace SalesforceMagic.Extensions
 {
     internal static class TypeExtensions
     {
-        internal static IEnumerable<PropertyInfo> GetFilteredProperties<T>(this Type type) where T : Attribute
-        {
-            return type.GetProperties().Where(x => x.GetCustomAttribute<T>() != null);
-        }
-
         internal static IEnumerable<PropertyInfo> FilterProperties<T>(this Type type) where T : Attribute
         {
             return type.GetProperties().Where(x => x.GetCustomAttribute<T>() == null);
         }
+
+		internal static IEnumerable<PropertyInfo> FilterProperties(
+			this Type type, 
+			SalesforceFilterOption inclusionOptions = SalesforceFilterOption.None,
+			SalesforceFilterOption exclusionOptions = SalesforceFilterOption.None)
+		{
+			return type
+				.GetProperties()
+				.Where(pi => (pi.GetCustomAttribute<SalesforceFilterAttribute>() == null) ||
+				             ((inclusionOptions != SalesforceFilterOption.None) &&
+				              pi.GetCustomAttribute<SalesforceFilterAttribute>().Options.HasFlag(inclusionOptions)) ||
+				             ((exclusionOptions != SalesforceFilterOption.None) &&
+				              (!pi.GetCustomAttribute<SalesforceFilterAttribute>().Options.HasFlag(exclusionOptions))));
+		}
 
         internal static IEnumerable<PropertyInfo> FilterProperties<T, TK>(this Type type) where T : Attribute where TK : Attribute
         {

@@ -1,5 +1,4 @@
 ﻿using System;
-using SalesforceMagic.Enums;
 
 namespace SalesforceMagic.Attributes
 {
@@ -8,13 +7,8 @@ namespace SalesforceMagic.Attributes
     ///     but never pushed to Salesforce
     /// </summary>
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
+	[Obsolete("Use the SalesforceFilterAttribute instead")]
     public class SalesforceReadonly : Attribute
     {
-//        public ApiType ApiType { get; set; }
-//
-//        public SalesforceReadonly(ApiType type = ApiType.Both)
-//        {
-//            ApiType = type;
-//        }
     }
 }

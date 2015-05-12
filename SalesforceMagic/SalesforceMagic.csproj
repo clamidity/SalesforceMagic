@@ -49,6 +49,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Abstract\ISalesforceClient.cs" />
+    <Compile Include="Attributes\SalesforceFilterAttribute.cs" />
+    <Compile Include="Attributes\SalesforceFilterOption.cs" />
     <Compile Include="Attributes\SalesforceIgnore.cs" />
     <Compile Include="Attributes\SalesforceNameAttribute.cs" />
     <Compile Include="Attributes\SalesforceReadonly.cs" />

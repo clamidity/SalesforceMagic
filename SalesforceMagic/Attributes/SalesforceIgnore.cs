@@ -7,9 +7,9 @@ namespace SalesforceMagic.Attributes
     ///     when building the salesforce query.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
+	[Obsolete("Use the SalesforceFilterAttribute instead")]
     public class SalesforceIgnore : Attribute
     {
 	    public bool IfEmpty { get; set; }
-		public bool AllowRead { get; set; }
 	}
 }
