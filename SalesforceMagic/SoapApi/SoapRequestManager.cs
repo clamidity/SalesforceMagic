@@ -144,9 +144,14 @@ namespace SalesforceMagic.SoapApi
 
         private static string GetSoapUrl(string instance, string apiVersion)
         {
-            return string.Format("{0}{1}/u/{2}", instance, SoapUrl, !string.IsNullOrEmpty(apiVersion) 
-                ? apiVersion 
-                : DefaultApiVersion);
+	        return string.Format(
+		        "{0}{1}{3}u/{2}",
+		        instance,
+		        SoapUrl,
+		        !string.IsNullOrEmpty(apiVersion)
+			        ? apiVersion
+			        : DefaultApiVersion,
+		        SoapUrl.EndsWith("/") ? "" : "/");
         }
     }
 }
