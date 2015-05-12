@@ -64,15 +64,16 @@ namespace SalesforceMagic.LinqProvider
 
         private static string VisitBinary(BinaryExpression node, string opr)
         {
-            if (node.Left.NodeType == ExpressionType.MemberAccess 
-                && node.Left.Type == typeof(bool)
-                && node.Right.NodeType == ExpressionType.Constant)
+            if ((node.Left.NodeType == ExpressionType.MemberAccess)
+                && ((node.Left.Type == typeof(bool)) || (node.Left.Type == typeof(bool?)))
+				&& ((node.Right.NodeType == ExpressionType.Constant) || (node.Right.NodeType == ExpressionType.Convert)))
             {
-                var right = ((ConstantExpression) node.Right).Value;
-                return "(" + ((PropertyInfo)((MemberExpression)node.Left).Member).GetName() + " " + opr + " " + right + ")";
+	            var right = node.Right.NodeType == ExpressionType.Constant ? ((ConstantExpression) node.Right).Value : ((UnaryExpression) node.Right).Operand;
+
+	            return "(" + ((PropertyInfo)((MemberExpression)node.Left).Member).GetName() + " " + opr + " " + right + ")";
             }
 
-            return "(" + VisitExpression(node.Left) + " " + opr + " " + VisitExpression(node.Right, true) + ")";
+	        return "(" + VisitExpression(node.Left) + " " + opr + " " + VisitExpression(node.Right, true) + ")";
         }
 
         private static string VisitConstant(ConstantExpression node)
@@ -98,7 +99,7 @@ namespace SalesforceMagic.LinqProvider
         private static string VisitMember(MemberExpression node, bool valueExpression = false)
         {
             if (node == null) return "null";
-            if (node.Type == typeof(bool)) return ((PropertyInfo)node.Member).GetName() + " = True";
+            //if ((node.Type == typeof(bool)) || (node.Type == typeof(bool?))) return ((PropertyInfo)node.Member).GetName() + " = True";
             if (node.Member is PropertyInfo && !valueExpression) return ((PropertyInfo)node.Member).GetName();
             if (node.Expression == null) throw new NullReferenceException();
 

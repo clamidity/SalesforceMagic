@@ -49,17 +49,16 @@ namespace SalesforceMagic.Entities
 			IList<string> fieldsToNull = new List<string>();
 			foreach (var info in from info in type.FilterProperties<SalesforceReadonly>()
 								 let ignoreAttribute = info.GetCustomAttribute<SalesforceIgnore>()
-								 where ignoreAttribute == null || ignoreAttribute.IfEmpty
+								 where ignoreAttribute == null || (!ignoreAttribute.IfEmpty)
 								 select info)
 			{
-				var ignoreAttribute = info.GetCustomAttribute<SalesforceIgnore>();
 				var value = accessor[this, info.Name];
 				var salesforceName = info.GetName();
 
 				// Need to be able to dynamically control nullable fields
 				if (value == null)
 				{
-					if ((ignoreAttribute == null) || (ignoreAttribute.IfEmpty && ((FieldsToNull.Count == 0) || FieldsToNull.Contains(info.Name))))
+					if ((FieldsToNull.Count == 0) || (!FieldsToNull.Contains(info.Name)))
 					{
 						fieldsToNull.Add(salesforceName);
 					}

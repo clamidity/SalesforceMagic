@@ -1,5 +1,4 @@
 ﻿using System;
-using SalesforceMagic.Enums;
 
 namespace SalesforceMagic.Attributes
 {
@@ -10,12 +9,7 @@ namespace SalesforceMagic.Attributes
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
     public class SalesforceIgnore : Attribute
     {
-        public bool IfEmpty { get; set; }
-//        public ApiType ApiType { get; set; }
-//
-//        public SalesforceIgnore(/*ApiType type = ApiType.Both*/)
-//        {
-//            ApiType = type;
-//        }
-    }
+	    public bool IfEmpty { get; set; }
+		public bool AllowRead { get; set; }
+	}
 }
